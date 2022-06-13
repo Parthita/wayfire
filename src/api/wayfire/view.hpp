@@ -10,6 +10,7 @@
 #include <wayfire/nonstd/wlroots.hpp>
 #include <wayfire/region.hpp>
 #include <wayfire/signal-provider.hpp>
+#include <wayfire/scene.hpp>
 
 namespace wf
 {
@@ -548,6 +549,24 @@ class view_interface_t : public surface_interface_t, public signal::provider_t
 };
 
 wayfire_view wl_surface_to_wayfire_view(wl_resource *surface);
+
+namespace scene
+{
+/**
+ * A node in the scenegraph representing a single view and its surfaces.
+ * Child views (dialogs, etc.) can be found in the parent view_tree_node_t.
+ */
+class view_node_t : public scene::node_t, std::enable_shared_from_this<view_node_t>
+{
+  public:
+    view_node_t(wayfire_view view);
+
+    std::optional<input_node_t> find_node_at(const wf::pointf_t& at) final;
+
+  private:
+    wayfire_view view;
+};
+}
 }
 
 #endif

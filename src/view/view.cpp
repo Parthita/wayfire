@@ -1331,3 +1331,45 @@ void wf::view_interface_t::destruct()
     view_impl->is_alive = false;
     wf::get_core_impl().erase_view(self());
 }
+
+wf::scene::view_tree_node_t::view_tree_node_t(wayfire_view view) :
+    scene::inner_node_t(false)
+{
+    node_ptr child = std::make_shared<view_node_t>(view);
+    this->set_children_unchecked({child});
+}
+
+std::optional<wf::scene::input_node_t> wf::scene::view_node_t::find_node_at(
+    const wf::pointf_t& at)
+{
+    if (view->minimized || !view->is_visible())
+    {
+        return {};
+    }
+
+    wf::pointf_t local_coordinates = at;
+
+    // First, translate to the view's output
+    if (view->get_output())
+    {
+        auto offset = wf::origin(view->get_output()->get_layout_geometry());
+        local_coordinates.x -= offset.x;
+        local_coordinates.y -= offset.y;
+    }
+
+    input_node_t result;
+    result.surface =
+        view->map_input_coordinates(local_coordinates, result.local_coords);
+
+    if (result.surface)
+    {
+        result.node = this;
+        return result;
+    }
+
+    // Empty std::optional => No intersection
+    return {};
+}
+
+wf::scene::view_node_t::view_node_t(wayfire_view _view) : node_t(false), view(_view)
+{}

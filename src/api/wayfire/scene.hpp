@@ -6,6 +6,7 @@
 #include <map>
 #include <wayfire/geometry.hpp>
 #include <wayfire/region.hpp>
+#include <wayfire/nonstd/observer_ptr.h>
 
 namespace wf
 {
@@ -59,6 +60,17 @@ class output_layout_t;
  *
  * - Always-on-top views are simply nodes which are placed above the dynamic
  *   container of the workspace layer of each output.
+ *
+ * Implementation notes:
+ *
+ * - Every node has output-layout coordinates. That means that coordinates are
+ *   relative to the global coordinate system where input events are handled
+ *   and where outputs are put relative to each other. Each output node by
+ *   default limits its surfaces to the area actually visible on that output.
+ *   Therefore, even though nodes appear (by using a global scenegraph and
+ *   global coordinates) to be on another output, they are actually only visible
+ *   on the workspaces of their own output. Another consequence of this is that
+ *   views change their coordinates when the workspace of an output changes.
  */
 namespace scene
 {
@@ -72,14 +84,14 @@ using inner_node_ptr = std::shared_ptr<inner_node_t>;
  */
 struct input_node_t
 {
-    const node_ptr& node;
+    nonstd::observer_ptr<node_t> node;
+
     // FIXME: In the future, this should be a separate interface, allowing
     // non-surface nodes to get user input as well.
     wf::surface_interface_t *surface;
 
-    input_node_t(const node_ptr& _node, wf::surface_interface_t *si) :
-        node(_node), surface(si)
-    {}
+    // The coordinates of the user input in surface-local coordinates.
+    wf::pointf_t local_coords;
 };
 
 /**
@@ -122,14 +134,12 @@ class node_t
   protected:
     node_t(bool is_structure);
     bool _is_structure;
-    inner_node_t *_parent;
+    inner_node_t *_parent = nullptr;
     friend class inner_node_t;
 };
 
 /**
- * An inner node of the scenegraph tree with a floating list of children.
- * Plugins may add additional nodes and reorder them, however, special care
- * needs to be taken to avoid reordering the special `structure` nodes.
+ * An inner node of the scenegraph tree with a list of children.
  */
 class inner_node_t : public node_t
 {
@@ -139,7 +149,7 @@ class inner_node_t : public node_t
     /**
      * Find the input node at the given position.
      */
-    std::optional<input_node_t> find_node_at(const wf::pointf_t& at) final;
+    std::optional<input_node_t> find_node_at(const wf::pointf_t& at);
 
     /**
      * Obtain an immutable list of the node's children.
@@ -149,21 +159,6 @@ class inner_node_t : public node_t
     {
         return children;
     }
-
-    /**
-     * Exchange the list of children of this node.
-     * A typical usage (for example, bringing a node to the top):
-     * 1. list = get_children()
-     * 2. list.erase(target_node)
-     * 3. list.insert(list.begin(), target_node)
-     * 4. set_children_list(list)
-     *
-     * The set_children_list function also performs checks on the structure
-     * nodes present in the inner node. If they were changed, the change is
-     * rejected and false is returned. In all other cases, the list of
-     * children is updated, and each child's parent is set to this node.
-     */
-    bool set_children_list(std::vector<node_ptr> new_list);
 
   protected:
     /**
@@ -179,9 +174,35 @@ class inner_node_t : public node_t
 };
 
 /**
+ * Inner nodes where plugins can add their own nodes and whose children can be
+ * reordered freely. However, special care needs to be taken to avoid reordering
+ * the special `structure` nodes.
+ */
+class floating_inner_node_t : public inner_node_t
+{
+  public:
+    using inner_node_t::inner_node_t;
+
+    /**
+     * Exchange the list of children of this node.
+     * A typical usage (for example, bringing a node to the top):
+     * 1. list = get_children()
+     * 2. list.erase(target_node)
+     * 3. list.insert(list.begin(), target_node)
+     * 4. set_children_list(list)
+     *
+     * The set_children_list function also performs checks on the structure
+     * nodes present in the inner node. If they were changed, the change is
+     * rejected and false is returned. In all other cases, the list of
+     * children is updated, and each child's parent is set to this node.
+     */
+    bool set_children_list(std::vector<node_ptr> new_list);
+};
+
+/**
  * A Level 3 node which represents each output in each layer.
  */
-class output_node_t : public inner_node_t
+class output_node_t final : public inner_node_t
 {
   public:
     output_node_t();
@@ -192,20 +213,20 @@ class output_node_t : public inner_node_t
      * are usually not modified when the workspace on the output changes, so
      * things like backgrounds and panels are usually static.
      */
-    std::shared_ptr<inner_node_t> _static;
+    std::shared_ptr<floating_inner_node_t> _static;
 
     /**
      * A container for the dynamic child nodes.
      * These nodes move together with the output's workspaces.
      * These nodes are most commonly views.
      */
-    std::shared_ptr<inner_node_t> dynamic;
+    std::shared_ptr<floating_inner_node_t> dynamic;
 };
 
 /**
  * A node which represents a layer (Level 2) in the scenegraph.
  */
-class layer_node_t : public inner_node_t
+class layer_node_t final : public inner_node_t
 {
   public:
     layer_node_t();
@@ -241,7 +262,7 @@ enum class layer : size_t
 /**
  * The root (Level 1) node of the whole scenegraph.
  */
-class root_node_t : public inner_node_t
+class root_node_t final : public inner_node_t
 {
   public:
     root_node_t();

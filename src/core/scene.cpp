@@ -46,7 +46,7 @@ static std::vector<node_t*> extract_structure_nodes(
     return structure;
 }
 
-bool inner_node_t::set_children_list(std::vector<node_ptr> new_list)
+bool floating_inner_node_t::set_children_list(std::vector<node_ptr> new_list)
 {
     // Structure nodes should be sorted in both sequences and be the same.
     // For simplicity, we just extract the nodes in new vectors and check that
@@ -74,11 +74,13 @@ void inner_node_t::set_children_unchecked(std::vector<node_ptr> new_list)
     this->children = std::move(new_list);
 }
 
-output_node_t::output_node_t() : inner_node_t(true)
+// FIXME: output nodes are actually structure nodes, but we need to add and
+// remove them dynamically ...
+output_node_t::output_node_t() : inner_node_t(false)
 {
-    this->_static = std::make_shared<inner_node_t>(true);
-    this->dynamic = std::make_shared<inner_node_t>(true);
-    set_children_unchecked({_static, dynamic});
+    this->_static = std::make_shared<floating_inner_node_t>(true);
+    this->dynamic = std::make_shared<floating_inner_node_t>(true);
+    set_children_unchecked({dynamic, _static});
 }
 
 layer_node_t::layer_node_t() : inner_node_t(true)
