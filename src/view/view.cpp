@@ -1236,6 +1236,10 @@ wf::view_interface_t::view_interface_t()
 {
     this->view_impl = std::make_unique<wf::view_interface_t::view_priv_impl>();
     take_ref();
+
+    view_impl->scene_node = std::make_shared<scene::floating_inner_node_t>(false);
+    auto view_node = std::make_shared<scene::view_node_t>(this);
+    view_impl->scene_node->set_children_list({view_node});
 }
 
 void wf::view_interface_t::take_ref()
@@ -1332,13 +1336,6 @@ void wf::view_interface_t::destruct()
     wf::get_core_impl().erase_view(self());
 }
 
-wf::scene::view_tree_node_t::view_tree_node_t(wayfire_view view) :
-    scene::inner_node_t(false)
-{
-    node_ptr child = std::make_shared<view_node_t>(view);
-    this->set_children_unchecked({child});
-}
-
 std::optional<wf::scene::input_node_t> wf::scene::view_node_t::find_node_at(
     const wf::pointf_t& at)
 {
@@ -1373,3 +1370,8 @@ std::optional<wf::scene::input_node_t> wf::scene::view_node_t::find_node_at(
 
 wf::scene::view_node_t::view_node_t(wayfire_view _view) : node_t(false), view(_view)
 {}
+
+const wf::scene::floating_inner_ptr& wf::view_interface_t::get_scene_node() const
+{
+    return view_impl->scene_node;
+}

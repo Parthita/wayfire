@@ -83,48 +83,13 @@ output_node_t::output_node_t() : inner_node_t(false)
     set_children_unchecked({dynamic, _static});
 }
 
-layer_node_t::layer_node_t() : inner_node_t(true)
-{}
-
-const std::shared_ptr<output_node_t>& layer_node_t::node_for_output(
-    wf::output_t *output)
-{
-    auto it = outputs.find(output);
-    if (it != outputs.end())
-    {
-        return it->second;
-    }
-
-    // FIXME: ...
-    static std::shared_ptr<output_node_t> null_output = nullptr;
-    return null_output;
-}
-
-void layer_node_t::handle_outputs_changed(wf::output_t *output, bool add)
-{
-    auto list = this->get_children();
-
-    if (add)
-    {
-        outputs[output] = std::make_shared<output_node_t>();
-        list.push_back(outputs[output]);
-    } else
-    {
-        node_ptr target = outputs[output];
-        outputs.erase(output);
-        list.erase(std::remove(list.begin(), list.end(), target));
-    }
-
-    set_children_unchecked(list);
-}
-
 root_node_t::root_node_t() : inner_node_t(true)
 {
     std::vector<node_ptr> children;
 
     for (int i = (int)layer::ALL_LAYERS - 1; i >= 0; i--)
     {
-        layers[i] = std::make_shared<layer_node_t>();
+        layers[i] = std::make_shared<floating_inner_node_t>(true);
         children.push_back(layers[i]);
     }
 

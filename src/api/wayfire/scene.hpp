@@ -198,6 +198,7 @@ class floating_inner_node_t : public inner_node_t
      */
     bool set_children_list(std::vector<node_ptr> new_list);
 };
+using floating_inner_ptr = std::shared_ptr<floating_inner_node_t>;
 
 /**
  * A Level 3 node which represents each output in each layer.
@@ -224,27 +225,6 @@ class output_node_t final : public inner_node_t
 };
 
 /**
- * A node which represents a layer (Level 2) in the scenegraph.
- */
-class layer_node_t final : public inner_node_t
-{
-  public:
-    layer_node_t();
-
-    /**
-     * Find the child node corresponding to the given output.
-     */
-    const std::shared_ptr<output_node_t>& node_for_output(wf::output_t *output);
-
-  private:
-    std::map<wf::output_t*, std::shared_ptr<output_node_t>> outputs;
-
-    // Called by output-layout when the outputs change
-    void handle_outputs_changed(wf::output_t *output, bool add);
-    friend class wf::output_layout_t;
-};
-
-/**
  * A list of all layers in the root node.
  */
 enum class layer : size_t
@@ -255,6 +235,8 @@ enum class layer : size_t
     TOP        = 3,
     UNMANAGED  = 4,
     OVERLAY    = 5,
+    // For compatibility with workspace-manager, to be removed
+    DWIDGET    = 6,
     /** Not a real layer, but a placeholder for the number of layers. */
     ALL_LAYERS,
 };
@@ -270,7 +252,7 @@ class root_node_t final : public inner_node_t
     /**
      * An ordered list of all layers' nodes.
      */
-    std::shared_ptr<layer_node_t> layers[(size_t)layer::ALL_LAYERS];
+    std::shared_ptr<floating_inner_node_t> layers[(size_t)layer::ALL_LAYERS];
 };
 }
 }
