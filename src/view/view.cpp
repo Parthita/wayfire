@@ -1375,3 +1375,9 @@ const wf::scene::floating_inner_ptr& wf::view_interface_t::get_scene_node() cons
 {
     return view_impl->scene_node;
 }
+
+wf::scene::iteration wf::scene::view_node_t::visit(visitor_t *visitor)
+{
+    visitor->view_node(this);
+    return iteration::SKIP_CHILDREN;
+}

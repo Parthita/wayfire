@@ -79,6 +79,21 @@ class inner_node_t;
 using node_ptr = std::shared_ptr<node_t>;
 using inner_node_ptr = std::shared_ptr<inner_node_t>;
 
+class visitor_t;
+
+/**
+ * Describes which nodes to visit after the current node.
+ */
+enum class iteration
+{
+    /** Do not visit any further nodes in the scenegraph. */
+    STOP,
+    /** Visit any further siblings, but not the children of the current node. */
+    SKIP_CHILDREN,
+    /** Visit children of the node first, then continue with siblings. */
+    ALL,
+};
+
 /**
  * Used as a result of an intersection of the scenegraph with the user input.
  */
@@ -106,6 +121,11 @@ class node_t
      * Find the input node at the given position.
      */
     virtual std::optional<input_node_t> find_node_at(const wf::pointf_t& at) = 0;
+
+    /**
+     * First visit the node and then its children from front to back.
+     */
+    virtual iteration visit(visitor_t *visitor) = 0;
 
     /**
      * Structure nodes are special nodes which core usually creates when Wayfire
@@ -146,10 +166,8 @@ class inner_node_t : public node_t
   public:
     inner_node_t(bool _is_structure);
 
-    /**
-     * Find the input node at the given position.
-     */
-    std::optional<input_node_t> find_node_at(const wf::pointf_t& at);
+    iteration visit(visitor_t *visitor) override;
+    std::optional<input_node_t> find_node_at(const wf::pointf_t& at) override;
 
     /**
      * Obtain an immutable list of the node's children.
@@ -253,6 +271,35 @@ class root_node_t final : public inner_node_t
      * An ordered list of all layers' nodes.
      */
     std::shared_ptr<floating_inner_node_t> layers[(size_t)layer::ALL_LAYERS];
+};
+
+class view_node_t;
+/**
+ * An interface for iterating over the scenegraph.
+ */
+class visitor_t
+{
+  public:
+    visitor_t(const visitor_t&) = delete;
+    visitor_t(visitor_t&&) = delete;
+    visitor_t& operator =(const visitor_t&) = delete;
+    visitor_t& operator =(visitor_t&&) = delete;
+    virtual ~visitor_t() = default;
+
+    /** Visit an inner node with children. */
+    virtual iteration inner_node(inner_node_t *node)
+    {
+        return iteration::ALL;
+    }
+
+    /** Visit a view node. */
+    virtual iteration view_node(view_node_t *node) = 0;
+
+    /** Visit a generic node whose type is neither inner nor view. */
+    virtual iteration generic_node(node_t *node)
+    {
+        return iteration::SKIP_CHILDREN;
+    }
 };
 }
 }

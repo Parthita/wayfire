@@ -31,6 +31,34 @@ std::optional<input_node_t> inner_node_t::find_node_at(const wf::pointf_t& at)
     return {};
 }
 
+iteration inner_node_t::visit(visitor_t *visitor)
+{
+    auto proceed = visitor->inner_node(this);
+    switch (proceed)
+    {
+      case iteration::STOP:
+        // Tell parent to stop
+        return iteration::STOP;
+
+      case iteration::ALL:
+        // Go through all children and see what they want
+        for (auto& ch : get_children())
+        {
+            if (ch->visit(visitor) == iteration::STOP)
+            {
+                return iteration::STOP;
+            }
+        }
+
+      // fallthrough
+
+      case iteration::SKIP_CHILDREN:
+        return iteration::ALL;
+    }
+
+    assert(false);
+}
+
 static std::vector<node_t*> extract_structure_nodes(
     const std::vector<node_ptr>& list)
 {

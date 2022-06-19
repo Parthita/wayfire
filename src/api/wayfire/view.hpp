@@ -582,6 +582,7 @@ class view_node_t : public scene::node_t, std::enable_shared_from_this<view_node
   public:
     view_node_t(wayfire_view view);
 
+    iteration visit(visitor_t *visitor) final;
     std::optional<input_node_t> find_node_at(const wf::pointf_t& at) final;
 
   private:
