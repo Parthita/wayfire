@@ -381,7 +381,7 @@ static void _dump_scene(wf::scene::node_ptr root, int depth = 0)
             (size_t)layer::ALL_LAYERS);
         node_line += "layer_";
         node_line += layer_names[idx];
-    } else if (auto node = dynamic_cast<output_node_t*>(root.get()))
+    } else if (dynamic_cast<output_node_t*>(root.get()))
     {
         node_line += "output";
     } else if (is_static_output(root))
@@ -390,7 +390,7 @@ static void _dump_scene(wf::scene::node_ptr root, int depth = 0)
     } else if (is_dynamic_output(root))
     {
         node_line += "dynamic";
-    } else if (auto inner = dynamic_cast<inner_node_t*>(root.get()))
+    } else if (dynamic_cast<inner_node_t*>(root.get()))
     {
         node_line += "inner";
     } else if (auto view_node = dynamic_cast<view_node_t*>(root.get()))
@@ -398,6 +398,11 @@ static void _dump_scene(wf::scene::node_ptr root, int depth = 0)
         std::ostringstream out;
         out << view_node->get_view();
         node_line += out.str();
+    }
+
+    if (root->flags() & ((int)node_flags::ACTIVE_KEYBOARD))
+    {
+        node_line += "(k)";
     }
 
     LOGD(node_line);
