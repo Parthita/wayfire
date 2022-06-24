@@ -12,6 +12,7 @@
 #include "input-manager.hpp"
 #include "wayfire/compositor-view.hpp"
 #include "wayfire/signal-definitions.hpp"
+#include "../scene-priv.hpp"
 
 void wf::keyboard_t::setup_listeners()
 {
@@ -32,8 +33,7 @@ void wf::keyboard_t::setup_listeners()
         if (!handle_keyboard_key(ev->keycode, ev->state) &&
             (mode != input_event_processing_mode_t::NO_CLIENT))
         {
-            wlr_seat_keyboard_notify_key(seat->seat,
-                ev->time_msec, ev->keycode, ev->state);
+            wf::get_core().scene()->priv->handle_key(*ev);
         }
 
         wlr_idle_notify_activity(wf::get_core().protocols.idle, seat->seat);
@@ -318,12 +318,6 @@ bool wf::keyboard_t::handle_keyboard_key(uint32_t key, uint32_t state)
         }
 
         mod_binding_key = 0;
-    }
-
-    auto iv = interactive_view_from_view(seat->keyboard_focus.get());
-    if (iv && !handled_in_plugin)
-    {
-        iv->handle_key(key, state);
     }
 
     return handled_in_plugin;

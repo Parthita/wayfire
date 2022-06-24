@@ -1,6 +1,9 @@
 #include <wayfire/scene.hpp>
+#include <wayfire/view.hpp>
 #include <set>
 #include <algorithm>
+
+#include "scene-priv.hpp"
 
 namespace wf
 {
@@ -122,6 +125,95 @@ root_node_t::root_node_t() : inner_node_t(true)
     }
 
     set_children_unchecked(children);
+    this->priv = std::make_unique<root_node_t::priv_t>();
+}
+
+root_node_t::~root_node_t()
+{}
+
+void root_node_t::update()
+{
+    priv->update_active_nodes(this);
+}
+
+class collect_active_nodes_t final : public visitor_t
+{
+  public:
+    std::vector<node_ptr> active_nodes;
+    void try_push(node_t *node)
+    {
+        if (node->flags() & (int)node_flags::ACTIVE_KEYBOARD)
+        {
+            active_nodes.push_back(node->shared_from_this());
+        }
+    }
+
+    /** Visit an inner node with children. */
+    iteration inner_node(inner_node_t *node) final
+    {
+        try_push(node);
+        return iteration::ALL;
+    }
+
+    /** Visit a view node. */
+    iteration view_node(view_node_t *node) final
+    {
+        try_push(node);
+        return iteration::ALL;
+    }
+
+    /** Visit a generic node whose type is neither inner nor view. */
+    iteration generic_node(node_t *node) final
+    {
+        try_push(node);
+        return iteration::ALL;
+    }
+};
+
+void root_node_t::priv_t::update_active_nodes(root_node_t *root)
+{
+    collect_active_nodes_t collector;
+    root->visit(&collector);
+
+    std::set<node_ptr> already_focused{
+        active_keyboard_nodes.begin(),
+        active_keyboard_nodes.end()
+    };
+
+    std::set<node_ptr> new_focused{
+        collector.active_nodes.begin(),
+        collector.active_nodes.end()
+    };
+
+    for (auto& old_focus : already_focused)
+    {
+        if (!new_focused.count(old_focus))
+        {
+            old_focus->keyboard_interaction().handle_keyboard_leave();
+        }
+    }
+
+    for (auto& new_focus : new_focused)
+    {
+        if (!already_focused.count(new_focus))
+        {
+            new_focus->keyboard_interaction().handle_keyboard_enter();
+        }
+    }
+
+    this->active_keyboard_nodes = std::move(collector.active_nodes);
+}
+
+void root_node_t::priv_t::handle_key(wlr_event_keyboard_key ev)
+{
+    for (auto& node : this->active_keyboard_nodes)
+    {
+        auto result = node->keyboard_interaction().handle_keyboard_key(ev);
+        if (result == keyboard_action::CONSUME)
+        {
+            break;
+        }
+    }
 }
 } // namespace scene
 }
