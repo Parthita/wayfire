@@ -31,6 +31,9 @@ class keyboard_t
     /* The keycode which triggered the modifier binding */
     uint32_t mod_binding_key = 0;
 
+    bool handle_keyboard_key(uint32_t key, uint32_t state);
+    void handle_keyboard_mod(uint32_t key, uint32_t state);
+
   private:
     wf::wl_listener_wrapper on_key, on_modifier;
     void setup_listeners();
@@ -45,9 +48,6 @@ class keyboard_t
     bool dirty_options = true;
 
     std::chrono::steady_clock::time_point mod_binding_start;
-
-    bool handle_keyboard_key(uint32_t key, uint32_t state);
-    void handle_keyboard_mod(uint32_t key, uint32_t state);
 
     /** Convert a key to a modifier */
     uint32_t mod_from_key(uint32_t key);

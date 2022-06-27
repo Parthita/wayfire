@@ -13,6 +13,7 @@
 #include <wayfire/util/log.hpp>
 #include "wayfire/signal-definitions.hpp"
 #include <wayfire/nonstd/wlroots.hpp>
+#include <wayfire/scene-operations.hpp>
 
 /* ------------------------ Drag icon impl ---------------------------------- */
 wf::drag_icon_t::drag_icon_t(wlr_drag_icon *ic) :
@@ -81,6 +82,51 @@ void wf::drag_icon_t::damage_surface_box_global(const wlr_box& rect)
             output->render->damage(local);
         }
     }
+}
+
+namespace wf
+{
+// TODO: right now, this is a thin wrapper around keyboard_t.
+// We need to consider how bindings should work with multiple keyboards, and move
+// bindings handling to a separate plugin.
+class keyboard_bindings_node_t final : public scene::node_t, keyboard_interaction_t
+{
+  public:
+    // FIXME: bindings are actually a structure node, or maybe not?
+    keyboard_bindings_node_t() : node_t(false)
+    {}
+
+    std::optional<scene::input_node_t> find_node_at(const wf::pointf_t& at) override
+    {
+        // No views or surfaces here
+        return {};
+    }
+
+    scene::iteration visit(scene::visitor_t *visitor) override
+    {
+        return visitor->generic_node(this);
+    }
+
+    int flags() const override
+    {
+        // We always want to accept keyboard input
+        return (int)scene::node_flags::ACTIVE_KEYBOARD;
+    }
+
+    keyboard_interaction_t& keyboard_interaction() override
+    {
+        return *this;
+    }
+
+    keyboard_action handle_keyboard_key(wlr_event_keyboard_key event) override
+    {
+        auto& seat = wf::get_core_impl().seat;
+        seat->current_keyboard->handle_keyboard_key(event.keycode, event.state);
+
+        // These are just bindings. We propagate the events to the clients.
+        return keyboard_action::PROPAGATE;
+    }
+};
 }
 
 /* ----------------------- wf::seat_t implementation ------------------------ */
@@ -214,6 +260,9 @@ wf::seat_t::seat_t()
     });
     wf::get_core().connect_signal("input-device-added", &on_new_device);
     wf::get_core().connect_signal("input-device-removed", &on_remove_device);
+
+    auto node = std::make_shared<wf::keyboard_bindings_node_t>();
+    scene::add_front(wf::get_core().scene(), std::move(node));
 }
 
 void wf::seat_t::update_capabilities()

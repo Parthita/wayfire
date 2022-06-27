@@ -114,7 +114,7 @@ output_node_t::output_node_t() : inner_node_t(false)
     set_children_unchecked({dynamic, _static});
 }
 
-root_node_t::root_node_t() : inner_node_t(true)
+root_node_t::root_node_t() : floating_inner_node_t(true)
 {
     std::vector<node_ptr> children;
 

@@ -13,6 +13,7 @@
 #include "wayfire/compositor-view.hpp"
 #include "wayfire/signal-definitions.hpp"
 #include "../scene-priv.hpp"
+#include <wayfire/debug.hpp>
 
 void wf::keyboard_t::setup_listeners()
 {
@@ -24,17 +25,12 @@ void wf::keyboard_t::setup_listeners()
 
     on_key.set_callback([&] (void *data)
     {
-        auto ev   = static_cast<wlr_event_keyboard_key*>(data);
-        auto mode = emit_device_event_signal("keyboard_key", ev);
+        auto ev = static_cast<wlr_event_keyboard_key*>(data);
+        emit_device_event_signal("keyboard_key", ev);
 
         auto& seat = wf::get_core_impl().seat;
         seat->set_keyboard(this);
-
-        if (!handle_keyboard_key(ev->keycode, ev->state) &&
-            (mode != input_event_processing_mode_t::NO_CLIENT))
-        {
-            wf::get_core().scene()->priv->handle_key(*ev);
-        }
+        wf::get_core().scene()->priv->handle_key(*ev);
 
         wlr_idle_notify_activity(wf::get_core().protocols.idle, seat->seat);
         emit_device_event_signal("keyboard_key_post", ev);

@@ -104,14 +104,14 @@ class seat_t
      */
     void ensure_input_surface(wf::surface_interface_t *surface);
 
+    /** The currently active keyboard device on the seat */
+    wf::keyboard_t *current_keyboard = nullptr;
+
   private:
     wf::wl_listener_wrapper request_start_drag, start_drag, end_drag,
         request_set_selection, request_set_primary_selection;
 
     wf::signal_connection_t on_new_device, on_remove_device;
-
-    /** The currently active keyboard device on the seat */
-    wf::keyboard_t *current_keyboard = nullptr;
 
     /** A list of all keyboards in this seat */
     std::vector<std::unique_ptr<wf::keyboard_t>> keyboards;

@@ -74,6 +74,8 @@ enum class input_event_processing_mode_t
     /**
      * Core should process this event for input grabs and bindings, but not send
      * the event to the client.
+     *
+     * TODO: FIXME: remove this altogether, the scenegraph can do that and more.
      */
     NO_CLIENT,
 };

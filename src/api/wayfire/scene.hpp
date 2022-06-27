@@ -297,7 +297,7 @@ enum class layer : size_t
 /**
  * The root (Level 1) node of the whole scenegraph.
  */
-class root_node_t final : public inner_node_t
+class root_node_t final : public floating_inner_node_t
 {
   public:
     root_node_t();
